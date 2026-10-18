@@ -30,11 +30,10 @@ jobs:
         id: run_claimer
         continue-on-error: true
         run: |
-          # 模擬寫入成功領取的 Log，並讓 Exit Code 為 0 (成功)
-          echo "Successfully claimed: Grand Theft Auto V" > log.txt
-          echo "Successfully claimed: 模擬遊戲名稱測試" >> log.txt
-          EXIT_CODE=0
+          node claimer.js > log.txt 2>&1
+          EXIT_CODE=$?
           echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
+          cat log.txt
           exit $EXIT_CODE
 
       - name: Send Discord Notification
