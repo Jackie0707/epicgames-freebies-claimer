@@ -30,8 +30,8 @@ jobs:
         id: run_claimer
         continue-on-error: true
         run: |
-          echo "Successfully claimed: GTA6" > log.txt
-          EXIT_CODE=0
+          node claimer.js > log.txt 2>&1
+          EXIT_CODE=$?
           echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
           cat log.txt
           exit $EXIT_CODE
