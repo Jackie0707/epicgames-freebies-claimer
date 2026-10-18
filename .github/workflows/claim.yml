@@ -22,7 +22,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Create device_auths.json from Secret
+        run: |
+          mkdir -p data
+          echo '${{ secrets.DEVICE_AUTHS }}' > data/device_auths.json
+
       - name: Run Claimer
-        env:
-          DEVICE_AUTHS: ${{ secrets.DEVICE_AUTHS }}
         run: node claimer.js
