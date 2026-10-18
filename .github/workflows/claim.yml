@@ -26,12 +26,32 @@ jobs:
           mkdir -p data
           echo '${{ secrets.DEVICE_AUTHS }}' > data/device_auths.json
 
-      - name: Run Claimer
-        run: node claimer.js
+      - name: Run Claimer and Save Log
+        id: run_claimer
+        run: |
+          # 執行領取並將輸出寫入 log.txt，同時顯示在主控台
+          node claimer.js | tee log.txt
 
       - name: Send Discord Notification
         if: always()
         run: |
+          # 檢查 log 內容，提取領取資訊
+          LOG_CONTENT=$(cat log.txt)
+          
+          # 預設訊息內容
+          MSG="🎮 **Epic Games 自動領取報告**\n"
+          
+          if grep -q "Claimed" log.txt || grep -q "Successfully" log.txt; then
+            # 抓取包含 Claimed 或 Successfully 的行數作為領取細節
+            DETAILS=$(grep -E "Claimed|Successfully" log.txt | head -n 5)
+            MSG="${MSG}✅ **領取成功！**\n\`\`\`\n${DETAILS}\n\`\`\`"
+          elif grep -q "No free" log.txt || grep -q "already" log.txt; then
+            MSG="${MSG}ℹ️ 當前無新遊戲可領取或已全數擁有。"
+          else
+            MSG="${MSG}🚀 腳本執行完畢，請至 GitHub Actions 檢視詳細日誌。"
+          fi
+
+          # 發送 JSON 給 Discord Webhook
           curl -H "Content-Type: application/json" \
-               -d '{"content": "🎮 Epic Games Freebies 領取工作流已執行完畢！"}' \
+               -d "{\"content\": \"${MSG}\"}" \
                "${{ secrets.DISCORD_WEBHOOK_URL }}"
