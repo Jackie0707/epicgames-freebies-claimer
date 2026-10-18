@@ -30,11 +30,9 @@ jobs:
         id: run_claimer
         continue-on-error: true
         run: |
-          node claimer.js > log.txt 2>&1
-          EXIT_CODE=$?
-          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
-          cat log.txt
-          exit $EXIT_CODE
+          # 手動寫入模擬的錯誤訊息，並設定 Exit Code 為 1 (代表失敗)
+          echo "2026-10-18 | ERROR | Mock authentication failure exception" > log.txt
+          exit 1
 
       - name: Send Discord Notification
         if: always()
