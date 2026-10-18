@@ -28,4 +28,6 @@ jobs:
           echo '${{ secrets.DEVICE_AUTHS }}' > data/device_auths.json
 
       - name: Run Claimer
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: node claimer.js
