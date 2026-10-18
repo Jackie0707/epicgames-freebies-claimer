@@ -32,6 +32,7 @@ jobs:
         run: |
           node claimer.js > log.txt 2>&1
           EXIT_CODE=$?
+          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
           cat log.txt
           exit $EXIT_CODE
 
@@ -39,45 +40,38 @@ jobs:
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EXIT_CODE: ${{ env.EXIT_CODE }}
         run: |
-          node -e '
-            const fs = require("fs");
-            const https = require("https");
+          python3 -c '
+          import os, json, re, urllib.request
 
-            const log = fs.existsSync("log.txt") ? fs.readFileSync("log.txt", "utf8") : "";
-            const exitCode = process.env.EXIT_CODE || "0";
-            
-            let message = "🎮 **Epic Games 自動領取報告**\n";
+          webhook_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+          exit_code = os.environ.get("EXIT_CODE", "0")
+          
+          log_content = ""
+          if os.path.exists("log.txt"):
+              with open("log.txt", "r", encoding="utf-8", errors="ignore") as f:
+                  log_content = f.read()
 
-            if (exitCode !== "0") {
-              const lines = log.split("\n").filter(l => l.trim()).slice(-3).join("\n");
-              message += `❌ **執行發生異常！**\n\`\`\`\n${lines}\n\`\`\`\n請至 GitHub Actions 檢查帳號授權或日誌。`;
-            } else if (/Claimed|Successfully/i.test(log)) {
-              const lines = log.split("\n").filter(l => /Claimed|Successfully/i.test(l)).slice(0, 5).join("\n");
-              message += `✅ **領取成功！**\n\`\`\`\n${lines}\n\`\`\``;
-            } else {
-              message += "ℹ️ **當前無新遊戲可領取或皆已擁有。**";
-            }
+          msg = "🎮 **Epic Games 自動領取報告**\n"
 
-            const data = JSON.stringify({ content: message });
-            const url = new URL(process.env.DISCORD_WEBHOOK_URL);
+          if exit_code != "0":
+              lines = [l.strip() for l in log_content.splitlines() if l.strip()]
+              err_tail = "\n".join(lines[-3:]) if lines else "無日誌內容"
+              msg += f"❌ **執行發生異常！**\n```\n{err_tail}\n```\n請至 GitHub Actions 檢查帳號授權或日誌。"
+          elif re.search(r"Claimed|Successfully", log_content, re.I):
+              claimed = [l for l in log_content.splitlines() if re.search(r"Claimed|Successfully", l, re.I)]
+              details = "\n".join(claimed[:5])
+              msg += f"✅ **領取成功！**\n```\n{details}\n```"
+          else:
+              msg += "ℹ️ **當前無新遊戲可領取或皆已擁有。**"
 
-            const req = https.request({
-              hostname: url.hostname,
-              path: url.pathname + url.search,
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Content-Length": Buffer.byteLength(data)
-              }
-            }, (res) => {
-              console.log(`Discord API 回應狀態碼: ${res.statusCode}`);
-            });
-
-            req.on("error", (e) => {
-              console.error(`發送 Discord 通知失敗: ${e.message}`);
-            });
-
-            req.write(data);
-            req.end();
+          if webhook_url:
+              data = json.dumps({"content": msg}).encode("utf-8")
+              req = urllib.request.Request(webhook_url, data=data, headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"})
+              try:
+                  with urllib.request.urlopen(req) as response:
+                      print(f"Discord 通知發送成功 (Status: {response.status})")
+              except Exception as e:
+                  print(f"發送 Discord 通知失敗: {e}")
           '
