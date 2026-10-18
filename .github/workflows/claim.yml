@@ -32,26 +32,52 @@ jobs:
         run: |
           node claimer.js > log.txt 2>&1
           EXIT_CODE=$?
-          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
           cat log.txt
           exit $EXIT_CODE
 
       - name: Send Discord Notification
         if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          MSG="🎮 **Epic Games 自動領取報告**\n"
-          
-          if [ "${{ env.EXIT_CODE }}" != "0" ]; then
-            ERROR_DETAILS=$(tail -n 3 log.txt)
-            # 使用跳脫字元保護引號，避免 JSON 崩潰
-            MSG="${MSG}❌ **執行發生異常！**\n\`\`\`\n${ERROR_DETAILS}\n\`\`\`\n請至 GitHub Actions 檢查帳號授權或日誌。"
-          elif grep -q -i "Claimed" log.txt || grep -q -i "Successfully" log.txt; then
-            DETAILS=$(grep -i -E "Claimed|Successfully" log.txt | head -n 5)
-            MSG="${MSG}✅ **領取成功！**\n\`\`\`\n${DETAILS}\n\`\`\`"
-          else
-            MSG="${MSG}ℹ️ **當前無新遊戲可領取或皆已擁有。**"
-          fi
+          node -e '
+            const fs = require("fs");
+            const https = require("https");
 
-          curl -H "Content-Type: application/json" \
-               -d "{\"content\": \"${MSG}\"}" \
-               "${{ secrets.DISCORD_WEBHOOK_URL }}"
+            const log = fs.existsSync("log.txt") ? fs.readFileSync("log.txt", "utf8") : "";
+            const exitCode = process.env.EXIT_CODE || "0";
+            
+            let message = "🎮 **Epic Games 自動領取報告**\n";
+
+            if (exitCode !== "0") {
+              const lines = log.split("\n").filter(l => l.trim()).slice(-3).join("\n");
+              message += `❌ **執行發生異常！**\n\`\`\`\n${lines}\n\`\`\`\n請至 GitHub Actions 檢查帳號授權或日誌。`;
+            } else if (/Claimed|Successfully/i.test(log)) {
+              const lines = log.split("\n").filter(l => /Claimed|Successfully/i.test(l)).slice(0, 5).join("\n");
+              message += `✅ **領取成功！**\n\`\`\`\n${lines}\n\`\`\``;
+            } else {
+              message += "ℹ️ **當前無新遊戲可領取或皆已擁有。**";
+            }
+
+            const data = JSON.stringify({ content: message });
+            const url = new URL(process.env.DISCORD_WEBHOOK_URL);
+
+            const req = https.request({
+              hostname: url.hostname,
+              path: url.pathname + url.search,
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(data)
+              }
+            }, (res) => {
+              console.log(`Discord API 回應狀態碼: ${res.statusCode}`);
+            });
+
+            req.on("error", (e) => {
+              console.error(`發送 Discord 通知失敗: ${e.message}`);
+            });
+
+            req.write(data);
+            req.end();
+          '
