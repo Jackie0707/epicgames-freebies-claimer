@@ -58,13 +58,13 @@ jobs:
           if exit_code != "0":
               lines = [l.strip() for l in log_content.splitlines() if l.strip()]
               err_tail = "\n".join(lines[-3:]) if lines else "無日誌內容"
-              msg += f"❌ **執行發生異常！**\n```\n{err_tail}\n```\n請至 GitHub Actions 檢查帳號授權或日誌。"
+              msg += f"❌ **執行發生異常！呱！菈菈救我！ **\n```\n{err_tail}\n```\n請至 GitHub Actions 檢查帳號授權或日誌。"
           elif re.search(r"Claimed|Successfully", log_content, re.I):
               claimed = [l for l in log_content.splitlines() if re.search(r"Claimed|Successfully", l, re.I)]
               details = "\n".join(claimed[:5])
-              msg += f"✅ **領取成功！**\n```\n{details}\n```"
+              msg += f"✅ **領取成功！**\n```\n{details}\n```已收入囊中。本週的消費由O公子買單（已消費0元）"
           else:
-              msg += "ℹ️ **當前無新遊戲可領取或皆已擁有。**"
+              msg += "ℹ️ **檢查過庫存了，皆為已有之物...想吃河豚了**"
 
           if webhook_url:
               data = json.dumps({"content": msg}).encode("utf-8")
