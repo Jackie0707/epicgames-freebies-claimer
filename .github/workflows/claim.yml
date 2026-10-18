@@ -2,9 +2,8 @@ name: Epic Games Freebies Claimer
 
 on:
   schedule:
-    # 每週五凌晨 00:30 (UTC) 自動執行領取
     - cron: '30 0 * * 5'
-  workflow_dispatch: # 允許在 GitHub 頁面上手動點擊執行
+  workflow_dispatch:
 
 jobs:
   claim:
@@ -28,6 +27,11 @@ jobs:
           echo '${{ secrets.DEVICE_AUTHS }}' > data/device_auths.json
 
       - name: Run Claimer
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: node claimer.js
+
+      - name: Send Discord Notification
+        if: always()
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{"content": "🎮 Epic Games Freebies 領取工作流已執行完畢！"}' \
+               "${{ secrets.DISCORD_WEBHOOK_URL }}"
