@@ -30,14 +30,9 @@ jobs:
         id: run_claimer
         continue-on-error: true
         run: |
-          # 手動寫入模擬的錯誤訊息，並設定 Exit Code 為 1 (代表失敗)
-          echo "2026-10-18 | ERROR | Mock authentication failure exception" > log.txt
-          exit 1
-
-      - name: Send Discord Notification
-        if: always()
-        run: |
-          MSG="🎮 **Epic Games 自動領取報告**\n"
+          # 手動寫入模擬的成功領取訊息，並設定 Exit Code 為 0 (代表成功)
+          echo "Successfully claimed: Epic Game Mock Title" > log.txt
+          exit 0
           
           # 檢查 exit code 是否不為 0 (確保中括號前後都有空格)
           if [ "${{ env.EXIT_CODE }}" != "0" ]; then
