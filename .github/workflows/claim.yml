@@ -30,13 +30,20 @@ jobs:
         id: run_claimer
         continue-on-error: true
         run: |
-          # 手動寫入模擬的成功領取訊息，並設定 Exit Code 為 0 (代表成功)
-          echo "Successfully claimed: Epic Game Mock Title" > log.txt
-          exit 0
+          node claimer.js > log.txt 2>&1
+          EXIT_CODE=$?
+          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
+          cat log.txt
+          exit $EXIT_CODE
+
+      - name: Send Discord Notification
+        if: always()
+        run: |
+          MSG="🎮 **Epic Games 自動領取報告**\n"
           
-          # 檢查 exit code 是否不為 0 (確保中括號前後都有空格)
           if [ "${{ env.EXIT_CODE }}" != "0" ]; then
             ERROR_DETAILS=$(tail -n 3 log.txt)
+            # 使用跳脫字元保護引號，避免 JSON 崩潰
             MSG="${MSG}❌ **執行發生異常！**\n\`\`\`\n${ERROR_DETAILS}\n\`\`\`\n請至 GitHub Actions 檢查帳號授權或日誌。"
           elif grep -q -i "Claimed" log.txt || grep -q -i "Successfully" log.txt; then
             DETAILS=$(grep -i -E "Claimed|Successfully" log.txt | head -n 5)
