@@ -26,13 +26,12 @@ jobs:
           mkdir -p data
           echo '${{ secrets.DEVICE_AUTHS }}' > data/device_auths.json
 
-     - name: Run Claimer and Save Log
+      - name: Run Claimer and Save Log
         id: run_claimer
         continue-on-error: true
         run: |
-          # 模擬腳本成功抓到新遊戲並完成領取的輸出
-          echo "Successfully claimed: Cyberpunk 2077 (Mock)" > log.txt
-          EXIT_CODE=0
+          node claimer.js > log.txt 2>&1
+          EXIT_CODE=$?
           echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
           cat log.txt
           exit $EXIT_CODE
