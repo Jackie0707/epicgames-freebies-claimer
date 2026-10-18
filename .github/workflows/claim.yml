@@ -1,0 +1,28 @@
+name: Epic Games Freebies Claimer
+
+on:
+  schedule:
+    # 每週五凌晨 00:30 (UTC) 自動執行領取
+    - cron: '30 0 * * 5'
+  workflow_dispatch: # 允許在 GitHub 頁面上手動點擊執行
+
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Claimer
+        env:
+          DEVICE_AUTHS: ${{ secrets.DEVICE_AUTHS }}
+        run: node claimer.js
