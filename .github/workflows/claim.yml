@@ -41,17 +41,17 @@ jobs:
         run: |
           MSG="🎮 **Epic Games 自動領取報告**\n"
           
-          # 改用真實的 Exit Code 來判斷是否真的失敗
+          # 1. 優先檢查是否發生嚴重錯誤 (Exit Code 不為 0)
           if [ "${{ env.EXIT_CODE }}" -ne 0 ]; then
             ERROR_DETAILS=$(tail -n 3 log.txt)
             MSG="${MSG}❌ **執行發生異常！**\n\`\`\`\n${ERROR_DETAILS}\n\`\`\`\n請至 GitHub Actions 檢查帳號授權或日誌。"
+          # 2. 檢查是否有成功領取到遊戲
           elif grep -q -i "Claimed" log.txt || grep -q -i "Successfully" log.txt; then
             DETAILS=$(grep -i -E "Claimed|Successfully" log.txt | head -n 5)
             MSG="${MSG}✅ **領取成功！**\n\`\`\`\n${DETAILS}\n\`\`\`"
-          elif grep -q -i "No free" log.txt || grep -q -i "already" log.txt || grep -q -i "owned" log.txt; then
-            MSG="${MSG}ℹ️ 檢查完畢：當前無新遊戲可領取或皆已擁有。"
+          # 3. 預設情況：程式順利跑完但沒抓到新遊戲（歸類為無新遊戲或已擁有）
           else
-            MSG="${MSG}🚀 腳本執行完畢，狀態正常。"
+            MSG="${MSG}ℹ️ **當前無新遊戲可領取或皆已擁有。**"
           fi
 
           curl -H "Content-Type: application/json" \
