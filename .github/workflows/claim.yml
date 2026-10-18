@@ -30,21 +30,20 @@ jobs:
         id: run_claimer
         continue-on-error: true
         run: |
-          # 記錄執行結果
           node claimer.js > log.txt 2>&1
           EXIT_CODE=$?
+          echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
           cat log.txt
           exit $EXIT_CODE
 
       - name: Send Discord Notification
         if: always()
         run: |
-          LOG_CONTENT=$(cat log.txt)
           MSG="🎮 **Epic Games 自動領取報告**\n"
           
-          # 檢查是否有錯誤發生 (Error, Failed, Exception 或退出代碼非 0)
-          if grep -q -i "error" log.txt || grep -q -i "fail" log.txt || grep -q -i "exception" log.txt; then
-            ERROR_DETAILS=$(grep -i -E "error|fail|exception" log.txt | head -n 3)
+          # 改用真實的 Exit Code 來判斷是否真的失敗
+          if [ "${{ env.EXIT_CODE }}" -ne 0 ]; then
+            ERROR_DETAILS=$(tail -n 3 log.txt)
             MSG="${MSG}❌ **執行發生異常！**\n\`\`\`\n${ERROR_DETAILS}\n\`\`\`\n請至 GitHub Actions 檢查帳號授權或日誌。"
           elif grep -q -i "Claimed" log.txt || grep -q -i "Successfully" log.txt; then
             DETAILS=$(grep -i -E "Claimed|Successfully" log.txt | head -n 5)
